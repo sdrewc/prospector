@@ -42,15 +42,6 @@ baseLayer = L.tileLayer(url, {
   accessToken:token,
 }).addTo(mymap);
 
-let url2 = 'https://api.mapbox.com/styles/v1/sfcta/cjscclu2q07qn1fpimxuf2wbd/tiles/256/{z}/{x}/{y}?access_token={accessToken}';
-let streetLayer = L.tileLayer(url2, {
-  attribution:attribution,
-  maxZoom: 18,
-  accessToken:token,
-  pane: 'shadowPane',
-});
-streetLayer.addTo(mymap);
-
 let stripes = new L.StripePattern({weight:3,spaceWeight:3,opacity:0.6,angle:135}); stripes.addTo(mymap);
 
 const ADDLAYERS = [
@@ -75,39 +66,39 @@ const ADDLAYERS = [
 
 // some important global variables.
 const API_SERVER = 'https://api.sfcta.org/api/';
-const GEO_VIEW = 'taz_boundaries';
-const DATA_VIEW = 'connectsf_lu';
+const GEO_VIEW = 'connectsf_tlinks_2015';
+const DATA_VIEW = 'connectsf_trnload';
 
 const GEOTYPE = 'TAZ';
-const GEOID_VAR = 'taz';
+const GEOID_VAR = 'a_b';
+const YR_VAR = 'year';
+const TOD_VAR = 'tp';
 
-const FRAC_COLS = [];
+const FRAC_COLS = ['load'];
 const YR_LIST = [2015,2050];
 
 const INT_COLS = [];
 const DISCRETE_VAR_LIMIT = 10;
-const MISSING_COLOR = '#ffffcc';
-const COLORRAMP = {SEQ: ['#e2f0ad', '#b9da8b', '#90c36a', '#5d9a56', '#437656', '#205756'],
-                    //SEQ: ['#ffffcc','#d9f0a3','#addd8e', '#78c679', '#31a354','#006837'],
-                    //SEQ: ['#ffecb3','#f2ad86', '#d55175', '#963d8e','#5b2d5b'],
+const MISSING_COLOR = '#ccd';
+const COLORRAMP = {//SEQ: ['#feefa9', '#ffd469', '#cc7b45', '#7d3e43'],
+                    SEQ: ['#fff9bf', '#ffe28a', '#ffc845', '#eba946','#cc7b45', '#7d3e43'],
                     DIV: ['#d7191c','#fdae61','#ffffbf','#a6d96a','#1a9641']};
 
+const DEF_BWIDTH = 4;
 const MAX_PCTDIFF = 200;
 const CUSTOM_BP_DICT = {
-  'jobpop': {'base':[25,50,100,200,400], 'diff':[25,50,100,200,400], 'pctdiff':[-20, -5, 5, 20]},
-  'pop': {'base':[25,50,100,200,400], 'diff':[25,50,100,200,400], 'pctdiff':[-20, -5, 5, 20]},
-  'tot': {'base':[25,50,100,200,400], 'diff':[25,50,100,200,400], 'pctdiff':[-20, -5, 5, 20]},
+  'load': {'base':[0.5,0.85,1], 'diff':[0.5,0.85,1], 'pctdiff':[-20, -5, 5, 20]},
+  'ab_vol': {'base':[100,500,2500,10000,50000], 'diff':[100,500,2500,10000,50000], 'pctdiff':[-20, -5, 5, 20]},
+  'periodcap': {'base':[100,500,2500,10000,50000], 'diff':[100,500,2500,10000,50000], 'pctdiff':[-20, -5, 5, 20]},
 };
 
 const METRIC_UNITS = {'pop': '000s per sq. mi.',
                       'tot': '000s per sq. mi.',
                       'jobpop': '000s per sq. mi.'};
-const METRIC_DESC = {'pop': 'Population','tot': 'Jobs',
-                      'jobpop': 'Jobs+Population',
+const METRIC_DESC = {'load': 'Load Factor','ab_vol': 'Volume',
+                      'periodcap': 'Capacity',
 };
-const METRIC_DESC_SHORT = {'pop': 'Pop','tot': 'Jobs',
-                      'jobpop': 'Jobs+Pop',
-};
+const METRIC_DESC_SHORT = METRIC_DESC;
 
 let sel_colorvals, sel_colors, sel_binsflag;
 
@@ -129,7 +120,7 @@ async function initialPrep() {
   
   console.log('3... ');
   //await buildChartHtmlFromData();
-  updateStats();
+  //updateStats();
   
   console.log('4... ');
   await fetchAddLayers();
@@ -138,7 +129,7 @@ async function initialPrep() {
 }
 
 async function fetchMapFeatures() {
-  const geo_url = API_SERVER + GEO_VIEW + '?taz=lt.1000&select=taz,geometry,nhood,sq_mile';
+  const geo_url = API_SERVER + GEO_VIEW + '?select=a_b,a,b,geometry';
 
   try {
     let resp = await fetch(geo_url);
@@ -196,10 +187,19 @@ infoPanel.onAdd = function(map) {
 };
 
 function getInfoHtml(geo) {
-  let retval = '<b>TAZ: </b>' + `${geo[GEOID_VAR]}<br/>` +
-                '<b>NEIGHBORHOOD: </b>' + `${geo.nhood}<br/><hr>`;
+  let metric_val = null;
+  if (geo.metric !== null) metric_val = (Math.round(geo.metric*100)/100).toLocaleString();
+  let base_val = null;
+  if (geo.base !== null) base_val = (Math.round(geo.base*100)/100).toLocaleString();
+  let comp_val = null;
+  if (geo.comp !== null) comp_val = (Math.round(geo.comp*100)/100).toLocaleString();
 
-  let metcol1 = app.selected_metric + YR_LIST[0];
+  let retval = '<b>Link AB: </b>' + `${geo[GEOID_VAR]}<br/>`;
+  if (app.comp_check) {
+    retval += `<b>${app.sliderValue[0]}</b> `+`<b>${METRIC_DESC[app.selected_metric]}: </b>` + `${base_val}<br/>` +
+              `<b>${app.sliderValue[1]}</b> `+`<b>${METRIC_DESC[app.selected_metric]}: </b>` + `${comp_val}<br/>`;
+  }
+  /*let metcol1 = app.selected_metric + YR_LIST[0];
   let metcol2 = app.selected_metric + YR_LIST[1];
   let metcol3 = app.selected_metric + 'den' + YR_LIST[0];
   let metcol4 = app.selected_metric + 'den' + YR_LIST[1];
@@ -209,14 +209,13 @@ function getInfoHtml(geo) {
   let metric3 = geo[metcol3].toLocaleString();
   let metric4 = geo[metcol4].toLocaleString();
   let diff = (geo[metcol2] - geo[metcol1]).toLocaleString();
-  let dendiff = (geo[metcol4] - geo[metcol3]).toLocaleString();
+  let dendiff = (geo[metcol4] - geo[metcol3]).toLocaleString();*/
 
-  retval += `<b>${YR_LIST[0]}</b> `+`<b>${METRIC_DESC[app.selected_metric]}: </b>` + `${metric1}<br/>` +
-            `<b>${YR_LIST[1]}</b> `+`<b>${METRIC_DESC[app.selected_metric]}: </b>` + `${metric2}<br/>` +
-            `<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + '<b> Change: </b>' + `${diff}<br/><hr>` +
-            `<b>${YR_LIST[0]}</b> `+`<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + `<b> Density (000s /sq. mi.): </b>` + `${metric3}<br/>` +
-            `<b>${YR_LIST[1]}</b> `+`<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + `<b> Density (000s /sq. mi.): </b>` + `${metric4}<br/>` +
-            `<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + '<b> Density Change: </b>' + `${dendiff}<br/>`;
+  retval += `<b>${METRIC_DESC[app.selected_metric]}: </b>` + 
+            (app.pct_check? '<b> %</b>': '') +
+            (app.comp_check? '<b> Diff: </b>':'<b>: </b>') +   
+            `${metric_val}` + 
+            ((app.pct_check && app.comp_check && metric_val !== null)? '%':'');
   return retval; 
 }
 
@@ -242,19 +241,23 @@ async function getMapData() {
   let tmp = {};
   for (let yr of YR_LIST) {
     tmp[yr] = {};
+    base_lookup[yr] = {};
+    for (let tod of app.tplist) {
+      base_lookup[yr][tod] = {};
+    }
     for (let met of app.metric_options) {
       tmp[yr][met.value] = 0;
     }
   }
   for (let entry of jsonData) {
-    base_lookup[entry[GEOID_VAR]] = entry;
+    base_lookup[entry[YR_VAR]][entry[TOD_VAR]][entry[GEOID_VAR]] = entry;
     for (let yr of YR_LIST) {
       for (let met of app.metric_options) {
         tmp[yr][met.value] += entry[met.value+yr];
       }
     }
   }
-  _aggregateData = [];
+  /*_aggregateData = [];
   for (let yr of YR_LIST) {
     let row = {};
     row['year'] = yr.toString();
@@ -262,7 +265,7 @@ async function getMapData() {
       row[met.value] = tmp[yr][met.value];
     }
     _aggregateData.push(row);
-  }
+  }*/
 }
 
 let base_lookup;
@@ -273,7 +276,8 @@ async function drawMapFeatures(queryMapData=true) {
   if (!_featJson) return;
   let cleanFeatures = _featJson.slice();
   let sel_metric = app.selected_metric;
-
+  let base_scnyr = app.sliderValue[0];
+  let comp_scnyr = app.sliderValue[1];
   let base_metric = sel_metric + app.sliderValue[0];
   let comp_metric = sel_metric + app.sliderValue[1];
   if (base_metric==comp_metric) {
@@ -287,34 +291,37 @@ async function drawMapFeatures(queryMapData=true) {
   try {
     if (queryMapData) {
       if (base_lookup == undefined) await getMapData();
-      
+
       let map_metric;
       map_vals = [];
       for (let feat of cleanFeatures) {
         map_metric = null;
         
-        if (base_lookup.hasOwnProperty(feat[GEOID_VAR])) {
+        /*if (base_lookup.hasOwnProperty(feat[GEOID_VAR])) {
           feat[sel_metric + YR_LIST[0]] = base_lookup[feat[GEOID_VAR]][sel_metric + YR_LIST[0]];
           feat[sel_metric + YR_LIST[1]] = base_lookup[feat[GEOID_VAR]][sel_metric + YR_LIST[1]];
           feat[sel_metric + 'den' + YR_LIST[0]] = Math.round(feat[sel_metric + YR_LIST[0]]/(feat['sq_mile']*1000));
           feat[sel_metric + 'den' + YR_LIST[1]] = Math.round(feat[sel_metric + YR_LIST[1]]/(feat['sq_mile']*1000));
-        } 
+        }*/ 
         
         if (app.comp_check) {
-          if (base_lookup.hasOwnProperty(feat[GEOID_VAR])) {
-            let feat_entry = base_lookup[feat[GEOID_VAR]];
-            map_metric = Math.round(feat_entry[comp_metric]/(feat['sq_mile']*1000)) - Math.round(feat_entry[base_metric]/(feat['sq_mile']*1000));
-            feat['base'] = feat_entry[base_metric];
-            feat['comp'] = feat_entry[comp_metric];
-            if (app.pct_check && app.comp_check) {
-              if (feat_entry[base_metric]>0) {
-                map_metric = map_metric*100/feat_entry[base_metric];
+          if (base_lookup[base_scnyr][app.selected_timep].hasOwnProperty(feat[GEOID_VAR])) {
+            if (base_lookup[comp_scnyr][app.selected_timep].hasOwnProperty(feat[GEOID_VAR])) {
+              feat['base'] = base_lookup[base_scnyr][app.selected_timep][feat[GEOID_VAR]][sel_metric];
+              feat['comp'] = base_lookup[comp_scnyr][app.selected_timep][feat[GEOID_VAR]][sel_metric];
+              map_metric = feat['comp'] - feat['base'];
+              if (app.pct_check && app.comp_check) {
+                if (feat_entry['base']>0) {
+                  map_metric = map_metric*100/feat_entry['base'];
+                } else {
+                  map_metric = 0;
+                }
               }
             }
           }
         } else {
-          if (base_lookup.hasOwnProperty(feat[GEOID_VAR])) {
-            map_metric = base_lookup[feat[GEOID_VAR]][base_metric]/(feat['sq_mile']*1000);
+          if (base_lookup[base_scnyr][app.selected_timep].hasOwnProperty(feat[GEOID_VAR])) {
+            map_metric = base_lookup[base_scnyr][app.selected_timep][feat[GEOID_VAR]][sel_metric];
           }
         }       
         
@@ -384,7 +391,7 @@ async function drawMapFeatures(queryMapData=true) {
       for(let i of sel_colorvals2) {
         sel_colors.push(color_func(i).hex());
       }
- 
+
       if (geoLayer) mymap.removeLayer(geoLayer);
       if (mapLegend) mymap.removeControl(mapLegend);
       geoLayer = L.geoJSON(cleanFeatures, {
@@ -408,7 +415,7 @@ async function drawMapFeatures(queryMapData=true) {
           (app.pct_check && app.comp_check)? '%': ''
         );
 
-        legHTML = '<h4>' + METRIC_DESC_SHORT[sel_metric] + ' Density' +
+        legHTML = '<h4>' + METRIC_DESC_SHORT[sel_metric] +
                   (app.pct_check? ' % Diff': (METRIC_UNITS.hasOwnProperty(sel_metric)? ('<br>(' + METRIC_UNITS[sel_metric] + ')') : '')) +
                   '</h4>' + legHTML;
         div.innerHTML = legHTML;
@@ -417,7 +424,7 @@ async function drawMapFeatures(queryMapData=true) {
       mapLegend.addTo(mymap);
       
       if (selectedGeo) {
-        if (base_lookup.hasOwnProperty(selectedGeo.feature[GEOID_VAR])) {
+        if (base_lookup[base_scnyr][app.selected_timep].hasOwnProperty(selectedGeo.feature[GEOID_VAR])) {
           //buildChartHtmlFromData(selectedGeo.feature[GEOID_VAR]);
           return cleanFeatures.filter(entry => entry[GEOID_VAR] == selectedGeo.feature[GEOID_VAR])[0];
         } else {
@@ -450,7 +457,8 @@ function styleByMetricColor(feat) {
               sel_binsflag
               );
   if (!color) color = MISSING_COLOR;
-  return { fillColor: color, opacity: 1, weight: 1, color: color, fillOpacity: 1};
+  if (feat['metric']==0) color = MISSING_COLOR;
+  return {opacity: 1, weight: DEF_BWIDTH, color: color};
 }
 
 let infoPanelTimeout;
@@ -506,9 +514,9 @@ function clickedOnFeature(e) {
   }
   selectedGeo = e.target;
   let selfeat = selectedGeo.feature;
-  app.chartSubtitle = GEOTYPE + ' ' + selfeat[GEOID_VAR] + ' in ' + selfeat.nhood;
+  //app.chartSubtitle = GEOTYPE + ' ' + selfeat[GEOID_VAR] + ' in ' + selfeat.nhood;
   selectedLatLng = e.latlng;
-  if (base_lookup.hasOwnProperty(selGeoId)) {
+  if (base_lookup[app.sliderValue[0]][app.selected_timep].hasOwnProperty(selGeoId)) {
     showGeoDetails(selectedLatLng);
     //buildChartHtmlFromData(selGeoId);
   } else {
@@ -605,6 +613,12 @@ function yrChanged(yr) {
 function metricChanged(metric) {
   app.selected_metric = metric;
 }
+function tpChanged(chosentp) {
+  app.selected_timep = chosentp;
+}
+function opChanged(chosenop) {
+  //app.selected_op = chosenop;
+}
 
 function getColorMode(cscheme) {
   if (app.modeMap.hasOwnProperty(cscheme.toString())) {
@@ -649,12 +663,30 @@ let app = new Vue({
     selected_year: '2015',
     sliderValue: [YR_LIST[0],YR_LIST[0]],
     
-    selected_metric: 'pop',
+    selected_timep: 'AM',
+    tplist: ['Daily','AM','MD','PM','EV','EA'],
+    tpmap: {'Daily':['Daily',''],
+            'EA':['3:00a-','6:00a'],
+            'AM':['6:00a-','9:00a'],
+            'MD':['9:00a-','3:30p'],
+            'PM':['3:30p-','6:30p'],
+            'EV':['6:30p-','3:00a']},
+    
+    selected_metric: 'load',
     metric_options: [
-    {text: 'Population', value: 'pop'},
-    {text: 'Jobs', value: 'tot'},
-    {text: 'Jobs + Population', value: 'jobpop'},
+    {text: 'Load', value: 'load'},
+    {text: 'Volume', value: 'ab_vol'},
+    {text: 'Capacity', value: 'periodcap'},
     ],
+    
+    selected_op: 'muni',
+    operator_options: [
+    {text: 'MUNI', value: 'muni'},
+    {text: 'BART', value: 'bart'},
+    {text: 'Caltrain', value: 'caltrain'},
+    {text: 'Reg. Bus', value: 'regbus'},     
+    ],
+    
     chartTitle: METRIC_DESC['pop'] + ' Trend',
     chartSubtitle: chart_deftitle, 
     
@@ -672,6 +704,8 @@ let app = new Vue({
   watch: {
     sliderValue: selectionChanged,
     selected_metric: selectionChanged,
+    selected_timep: selectionChanged,
+    selected_op: selectionChanged,
     addLayers: showExtraLayers,
   },
   methods: {
@@ -679,6 +713,8 @@ let app = new Vue({
     clickedShowHide: clickedShowHide,
     yrChanged: yrChanged,
     metricChanged: metricChanged,
+    tpChanged: tpChanged,
+    opChanged: opChanged,
   },
 });
 

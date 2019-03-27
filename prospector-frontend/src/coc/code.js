@@ -59,10 +59,6 @@ const ADDLAYERS = [
     style: { opacity: 1, weight: 3, color: '#730073', fillOpacity: 0, interactive: false},
   },
   {
-    view: 'coc2017_diss', name: 'Communities of Concern',
-    style: { opacity: 1, weight: 2, color: 'grey', fillPattern: stripes, interactive: false},
-  },
-  {
     view: 'sfparks', name: 'Major Parks',
     style: { opacity: 1, weight: 2, color: 'grey', fillPattern: stripes, interactive: false},
   },
@@ -75,11 +71,11 @@ const ADDLAYERS = [
 
 // some important global variables.
 const API_SERVER = 'https://api.sfcta.org/api/';
-const GEO_VIEW = 'taz_boundaries';
-const DATA_VIEW = 'connectsf_lu';
+const GEO_VIEW = 'coc2017';
+const DATA_VIEW = 'coc2017';
 
-const GEOTYPE = 'TAZ';
-const GEOID_VAR = 'taz';
+const GEOTYPE = 'CoC';
+const GEOID_VAR = 'geoid_1';
 
 const FRAC_COLS = [];
 const YR_LIST = [2015,2050];
@@ -87,16 +83,19 @@ const YR_LIST = [2015,2050];
 const INT_COLS = [];
 const DISCRETE_VAR_LIMIT = 10;
 const MISSING_COLOR = '#ffffcc';
-const COLORRAMP = {SEQ: ['#e2f0ad', '#b9da8b', '#90c36a', '#5d9a56', '#437656', '#205756'],
-                    //SEQ: ['#ffffcc','#d9f0a3','#addd8e', '#78c679', '#31a354','#006837'],
-                    //SEQ: ['#ffecb3','#f2ad86', '#d55175', '#963d8e','#5b2d5b'],
+const COLORRAMP = {SEQ: ['#ffe28a', '#cc7b45', '#7d3e43'],
                     DIV: ['#d7191c','#fdae61','#ffffbf','#a6d96a','#1a9641']};
 
 const MAX_PCTDIFF = 200;
 const CUSTOM_BP_DICT = {
-  'jobpop': {'base':[25,50,100,200,400], 'diff':[25,50,100,200,400], 'pctdiff':[-20, -5, 5, 20]},
-  'pop': {'base':[25,50,100,200,400], 'diff':[25,50,100,200,400], 'pctdiff':[-20, -5, 5, 20]},
-  'tot': {'base':[25,50,100,200,400], 'diff':[25,50,100,200,400], 'pctdiff':[-20, -5, 5, 20]},
+  'min': {'base':[50,70,90],},
+  'linc': {'base':[25,30,35],},
+  'o75': {'base':[5,10,15],},
+  'disab': {'base':[10,25,40],},
+  'lep': {'base':[10,20,30],},
+  'zvhh': {'base':[5,10,15],},
+  'spfam': {'base':[10,20,30],},
+  'rentb': {'base':[5,15,25],},
 };
 
 const METRIC_UNITS = {'pop': '000s per sq. mi.',
@@ -105,9 +104,15 @@ const METRIC_UNITS = {'pop': '000s per sq. mi.',
 const METRIC_DESC = {'pop': 'Population','tot': 'Jobs',
                       'jobpop': 'Jobs+Population',
 };
-const METRIC_DESC_SHORT = {'pop': 'Pop','tot': 'Jobs',
-                      'jobpop': 'Jobs+Pop',
+const METRIC_DESC_SHORT = {'min': 'Minority Pop','linc': 'Low-Income Pop','o75': 'Over 75 yrs Pop','disab': 'Disabled Pop',
+                      'lep': 'Low English Pop','zvhh': 'Zero-Veh HH','spfam': 'Single-Parent Fam','rentb': 'Rent-Burdened HH'
 };
+const VARMAP = [
+  {'min':'pct_minori','linc':'pct_below2','o75':'pct_over75','disab':'pct_disab',
+  'lep':'pct_lep','zvhh':'pct_zvhhs','spfam':'pct_spfam','rentb':'pct_hus_re'},
+  {'min':'pct_mino_1','linc':'pct_lowinc','o75':'pct_over_1','disab':'pct_disab_',
+  'lep':'pct_lep_1','zvhh':'pct_zvhh','spfam':'pct_spfam_','rentb':'pct_rent50'}
+];
 
 let sel_colorvals, sel_colors, sel_binsflag;
 
@@ -138,7 +143,7 @@ async function initialPrep() {
 }
 
 async function fetchMapFeatures() {
-  const geo_url = API_SERVER + GEO_VIEW + '?taz=lt.1000&select=taz,geometry,nhood,sq_mile';
+  const geo_url = API_SERVER + GEO_VIEW + '?select=geoid_1,geometry';
 
   try {
     let resp = await fetch(geo_url);
@@ -148,12 +153,27 @@ async function fetchMapFeatures() {
     for (let feat of features) {
       feat['type'] = 'Feature';
       feat['geometry'] = JSON.parse(feat.geometry);
+      feat = updateGeoType(feat);
     }
     return features;
 
   } catch (error) {
     console.log('map feature error: ' + error);
   }
+}
+async function updateGeoType(obj) {
+  obj['bgflag'] = 0;
+  if (obj[GEOID_VAR].length==11) {
+    obj['tract_id'] = obj[GEOID_VAR].substring(5,11);
+    obj['bg_id'] = 'NA';
+  } else if (obj[GEOID_VAR].length==19) {
+    obj['tract_id'] = obj[GEOID_VAR].substring(12,18);
+    obj['bg_id'] = obj[GEOID_VAR].substring(18,19);
+    obj['bgflag'] = 1;
+  } else {
+    throw 'ERROR: Unknown feature/geography!!!' + GEOID_VAR + ': ' + obj[GEOID_VAR];
+  }
+  return obj;
 }
 
 async function fetchAddLayers() {
@@ -196,10 +216,10 @@ infoPanel.onAdd = function(map) {
 };
 
 function getInfoHtml(geo) {
-  let retval = '<b>TAZ: </b>' + `${geo[GEOID_VAR]}<br/>` +
-                '<b>NEIGHBORHOOD: </b>' + `${geo.nhood}<br/><hr>`;
+  let retval = '<b>TRACT ID: </b>' + `${geo['tract_id']}<br/>` +
+                '<b>BLOCKGROUP ID: </b>' + `${geo['bg_id']}<br/><hr>`;
 
-  let metcol1 = app.selected_metric + YR_LIST[0];
+  /*let metcol1 = app.selected_metric + YR_LIST[0];
   let metcol2 = app.selected_metric + YR_LIST[1];
   let metcol3 = app.selected_metric + 'den' + YR_LIST[0];
   let metcol4 = app.selected_metric + 'den' + YR_LIST[1];
@@ -216,7 +236,10 @@ function getInfoHtml(geo) {
             `<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + '<b> Change: </b>' + `${diff}<br/><hr>` +
             `<b>${YR_LIST[0]}</b> `+`<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + `<b> Density (000s /sq. mi.): </b>` + `${metric3}<br/>` +
             `<b>${YR_LIST[1]}</b> `+`<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + `<b> Density (000s /sq. mi.): </b>` + `${metric4}<br/>` +
-            `<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + '<b> Density Change: </b>' + `${dendiff}<br/>`;
+            `<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + '<b> Density Change: </b>' + `${dendiff}<br/>`;*/
+  if (app.selected_metric != 'None') {
+    retval += `<b>${METRIC_DESC_SHORT[app.selected_metric]}</b>` + `<b> Percent: </b>` + `${geo['metric']}` + `%`;
+  }
   return retval; 
 }
 
@@ -247,7 +270,9 @@ async function getMapData() {
     }
   }
   for (let entry of jsonData) {
+    
     base_lookup[entry[GEOID_VAR]] = entry;
+    
     for (let yr of YR_LIST) {
       for (let met of app.metric_options) {
         tmp[yr][met.value] += entry[met.value+yr];
@@ -293,12 +318,12 @@ async function drawMapFeatures(queryMapData=true) {
       for (let feat of cleanFeatures) {
         map_metric = null;
         
-        if (base_lookup.hasOwnProperty(feat[GEOID_VAR])) {
+        /*if (base_lookup.hasOwnProperty(feat[GEOID_VAR])) {
           feat[sel_metric + YR_LIST[0]] = base_lookup[feat[GEOID_VAR]][sel_metric + YR_LIST[0]];
           feat[sel_metric + YR_LIST[1]] = base_lookup[feat[GEOID_VAR]][sel_metric + YR_LIST[1]];
           feat[sel_metric + 'den' + YR_LIST[0]] = Math.round(feat[sel_metric + YR_LIST[0]]/(feat['sq_mile']*1000));
           feat[sel_metric + 'den' + YR_LIST[1]] = Math.round(feat[sel_metric + YR_LIST[1]]/(feat['sq_mile']*1000));
-        } 
+        }*/ 
         
         if (app.comp_check) {
           if (base_lookup.hasOwnProperty(feat[GEOID_VAR])) {
@@ -314,7 +339,7 @@ async function drawMapFeatures(queryMapData=true) {
           }
         } else {
           if (base_lookup.hasOwnProperty(feat[GEOID_VAR])) {
-            map_metric = base_lookup[feat[GEOID_VAR]][base_metric]/(feat['sq_mile']*1000);
+            map_metric = base_lookup[feat[GEOID_VAR]][VARMAP[feat['bgflag']][sel_metric]]*100;
           }
         }       
         
@@ -405,16 +430,16 @@ async function drawMapFeatures(queryMapData=true) {
           sel_colorvals,
           sel_colors,
           sel_binsflag,
-          (app.pct_check && app.comp_check)? '%': ''
+          '%'
         );
 
-        legHTML = '<h4>' + METRIC_DESC_SHORT[sel_metric] + ' Density' +
+        legHTML = '<h4>' + METRIC_DESC_SHORT[sel_metric] +
                   (app.pct_check? ' % Diff': (METRIC_UNITS.hasOwnProperty(sel_metric)? ('<br>(' + METRIC_UNITS[sel_metric] + ')') : '')) +
                   '</h4>' + legHTML;
         div.innerHTML = legHTML;
         return div;
       };
-      mapLegend.addTo(mymap);
+      if (app.selected_metric != 'None') mapLegend.addTo(mymap);
       
       if (selectedGeo) {
         if (base_lookup.hasOwnProperty(selectedGeo.feature[GEOID_VAR])) {
@@ -450,7 +475,11 @@ function styleByMetricColor(feat) {
               sel_binsflag
               );
   if (!color) color = MISSING_COLOR;
-  return { fillColor: color, opacity: 1, weight: 1, color: color, fillOpacity: 1};
+  if (app.selected_metric == 'None') {
+    return { fillColor: '#baa0d2', opacity: 0, weight: 0, color: color, fillOpacity: 0.5};
+  } else {
+    return { fillColor: color, opacity: 1, weight: 1, color: color, fillOpacity: 1};
+  }
 }
 
 let infoPanelTimeout;
@@ -649,11 +678,17 @@ let app = new Vue({
     selected_year: '2015',
     sliderValue: [YR_LIST[0],YR_LIST[0]],
     
-    selected_metric: 'pop',
+    selected_metric: 'None',
     metric_options: [
-    {text: 'Population', value: 'pop'},
-    {text: 'Jobs', value: 'tot'},
-    {text: 'Jobs + Population', value: 'jobpop'},
+    {text: 'None', value: 'None'},
+    {text: 'Minority', value: 'min'},
+    {text: 'Low Income', value: 'linc'},
+    {text: 'Elderly', value: 'o75'},
+    {text: 'Disability', value: 'disab'},
+    {text: 'Low English Prof.', value: 'lep'},
+    {text: 'Zero-Veh HH', value: 'zvhh'},
+    {text: 'Single Parent', value: 'spfam'},
+    {text: 'Rent Burdened', value: 'rentb'},
     ],
     chartTitle: METRIC_DESC['pop'] + ' Trend',
     chartSubtitle: chart_deftitle, 

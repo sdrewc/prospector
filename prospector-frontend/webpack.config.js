@@ -14,6 +14,9 @@ const sfcta_components = [
      'csf_tt',
      'csf_jobpop',
 	   'csf_acc',
+     'csf_trnload',
+     'coc',
+     'csf_vmt',
      'lehd',
 	 //'cmp-v0',
 ];

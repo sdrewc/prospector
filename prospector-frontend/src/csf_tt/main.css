@@ -69,6 +69,7 @@
   right: 400px;
   z-index: 10;
   height:1%;
+  transition: margin 0.4s;
 }
 
 .shrunken {
@@ -110,7 +111,7 @@ hr {margin: 1% 0px; }
   margin: 5px 5px 5px 5px;
 }
 .ui.toggle.checkbox {
-  margin: 2% 0px;
+  margin: 2% 3%;
 }
 .ui.toggle.checkbox input:focus:checked~label:before{
   background-color: #f56e71!important;

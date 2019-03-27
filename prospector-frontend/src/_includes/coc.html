@@ -12,9 +12,8 @@
   
   <div id="panel" v-bind:class="{ shrunken: isPanelHidden}">
       <div id="preheader">
-        <a target="_blank" href="https://connectsf.org/"><img src="https://connectsf.wpengine.com/wp-content/uploads/2016/07/connectsf-logo-color.png"  height="50" width="250" alt="Connect SF"/></a>
         <hr/>
-        <h3 class="apptitle">Population & Jobs</h3>
+        <h3 class="apptitle">Communities of Concern</h3>
         <div id="helpbar">
             <button class="ui mini right labeled icon color1 button"
                     v-on:click="clickToggleHelp">
@@ -23,7 +22,7 @@
             </button>
             &nbsp;
             <button class="ui mini right labeled icon color1 button"
-                    v-on:click="this.window.open('https://connectsf.org/','_blank')">
+                    v-on:click="this.window.open('http://opendata.mtc.ca.gov/datasets/mtc-communities-of-concern-in-2018-acs-2012-2016','_blank')">
                     <i class="arrow right icon"></i>
                     Learn More
             </button>
@@ -31,7 +30,7 @@
         </div>
 
         <div id="picker">
-          <h5>CHOOSE SCENARIO</h5>
+          <!--h5>CHOOSE SCENARIO</h5>
           <div>
             <button v-for="item in year_options"
                   v-on:click="yrChanged(item.value)"
@@ -39,7 +38,7 @@
                   v-bind:class="{ active: item.value==selected_year, color2: item.value==selected_year }">
                   ${item.text}
             </button>
-          </div>
+          </div-->
           
           <h5>CHOOSE MEASURE</h5>
           <div>
@@ -52,13 +51,13 @@
           </div>
           
           <hr/>
-          <h5>CITYWIDE SUMMARY</h5>
+          <!--h5>CITYWIDE SUMMARY</h5>
           <table id="citywide">
             <tr><th>Measure/Year</th><th align="right">2010</th><th align="right">2050</th></tr>
             <tr><td>Population</td><td align="right">${aggData[0].pop}</td><td align="right">${aggData[1].pop}</td></tr>
             <tr><td>Jobs</td><td align="right">${aggData[0].tot}</td><td align="right">${aggData[1].tot}</td></tr>
             <tr><td>Jobs+Population</td><td align="right">${aggData[0].jobpop}</td><td align="right">${aggData[1].jobpop}</td></tr>
-          </table>
+          </table-->
           
           <h5>MAP LAYERS</h5>
           <p>Add additional geographic data to the map.</p>
@@ -113,9 +112,9 @@
 
   <div id="helpbox" v-if="showHelp" class="ui segment">
   <div v-cloak> <!-- hides everything until Vue finished loading -->
-        <h2 style="margin-bottom:0px;">ConnectSF: Jobs & Population</h2>
+        <h2 style="margin-bottom:0px;">Communities of Concern 2017</h2>
         <hr style="margin-bottom:5px;margin-top:5px"/>
-        Use this tool to explore jobs and population measures for ConnectSF.
+        Use this tool to explore Communities of Concern (CoC) identified for San Francisco.
 
         <!--ul>
         <li><b>Auto Level-of-Service (LOS)</b> grades road segments by vehicle delay with "A" describing free flow,
@@ -129,9 +128,7 @@
         <h2 style="margin-top:10px; margin-bottom:0px;">How to use this map</h2>
         <hr style="margin-bottom:5px;margin-top:5px"/>
         <ul>
-        <li>Select a scenario year and measure to display it at the TAZ level on the map.</li>
-        <li>Select "Change" scenario to view the difference between future (2050) and base (2015) scenarios.</li>
-        <li>Click on a colored TAZ on the map to see TAZ-specific details.</li>
+        <li>Select an evaluation measure on the side panel to display it for each CoC on the map.</li>
         </ul>
 
         <div style="margin-top:20px;">
@@ -139,14 +136,14 @@
             &nbsp;OK&nbsp;
           </button>
 
-          <button v-on:click="this.window.open('/assets/connectsf_jobpop.zip')"
+          <button v-on:click="this.window.open('/assets/CoC_2017_shapefile.zip')"
                   class="small ui right labeled icon floated color1 button"
                   style="margin-right:5px">
                   <i class="icon download"></i>
                   Download data (.zip)
           </button>
 
-          <button v-on:click="this.window.open('https://connectsf.org/','_blank')"
+          <button v-on:click="this.window.open('http://opendata.mtc.ca.gov/datasets/mtc-communities-of-concern-in-2018-acs-2012-2016','_blank')"
                   class="small ui right floated basic teal button"
                   style="margin-right:5px">
                   Learn more&hellip;

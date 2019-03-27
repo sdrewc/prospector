@@ -14,7 +14,7 @@
       <div id="preheader">
         <a target="_blank" href="https://connectsf.org/"><img src="https://connectsf.wpengine.com/wp-content/uploads/2016/07/connectsf-logo-color.png"  height="50" width="250" alt="Connect SF"/></a>
         <hr/>
-        <h3 class="apptitle">Population & Jobs</h3>
+        <h3 class="apptitle">Transit Loads</h3>
         <div id="helpbar">
             <button class="ui mini right labeled icon color1 button"
                     v-on:click="clickToggleHelp">
@@ -50,15 +50,35 @@
                   ${item.text}
             </button>
           </div>
+
+          <h5>CHOOSE TIME PERIOD</h5>
+          <div class="compact ui horizontal mini buttons">
+            <button v-for="item in tplist"
+                  v-on:click="tpChanged(item)"
+                  class="ui grey button"
+                  v-bind:class="{ active: item==selected_timep, color2: item==selected_timep }">
+                  ${tpmap[item][0]}<br>${tpmap[item][1]}
+            </button>
+          </div>          
+
+          <h5>CHOOSE OPERATOR</h5>
+          <div>
+            <button v-for="item in operator_options"
+                  v-on:click="opChanged(item.value)"
+                  class="ui tiny grey button"
+                  v-bind:class="{ active: item.value==selected_op, color2: item.value==selected_op }">
+                  ${item.text}
+            </button>
+          </div>  
           
           <hr/>
-          <h5>CITYWIDE SUMMARY</h5>
+          <!--h5>CITYWIDE SUMMARY</h5>
           <table id="citywide">
             <tr><th>Measure/Year</th><th align="right">2010</th><th align="right">2050</th></tr>
             <tr><td>Population</td><td align="right">${aggData[0].pop}</td><td align="right">${aggData[1].pop}</td></tr>
             <tr><td>Jobs</td><td align="right">${aggData[0].tot}</td><td align="right">${aggData[1].tot}</td></tr>
             <tr><td>Jobs+Population</td><td align="right">${aggData[0].jobpop}</td><td align="right">${aggData[1].jobpop}</td></tr>
-          </table>
+          </table-->
           
           <h5>MAP LAYERS</h5>
           <p>Add additional geographic data to the map.</p>
