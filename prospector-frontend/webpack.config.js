@@ -18,6 +18,7 @@ const sfcta_components = [
      'coc',
      'csf_vmt',
      'lehd',
+     'lehd_taz',
 	 //'cmp-v0',
 ];
 
