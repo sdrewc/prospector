@@ -26,6 +26,7 @@ const sfcta_components = [
      'champtrips',
      'tnctrnfac',
      'survey2018',
+     'survey2018_local',
 	 //'cmp-v0',
 ];
 
