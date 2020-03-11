@@ -121,8 +121,9 @@ const MODE_MAP_DET = {1:'Walk',2:'Bike-hh',3:'Bike-borrowed',4:'Bike-rent',
 68:'CableCar',69:'Bikeshare-reg',70:'Bikeshare-ele',71:'Scootershare',73:'Mopedshare',74:'Segway',75:'OthScooter',76:'Carpool-match',77:'PersScooter',995:'',997:'Other'};
 const MODE_MAP = {1:'Walk',2:'Bike',3:'Car',4:'Taxi',5:'Transit',6:'Schoolbus',7:'Other',8:'Shuttle/vanpool',
 9:'TNC',10:'Carshare',11:'Bikeshare',12:'Scooter share',13:'long-distance'};
-const PURP_MAP = {1:'Home',2:'Work',3:'Work-related',4:'School',5:'Escort',6:'Shop',7:'Meal',8:'SocRec',9:'Errand/appointment',10:'ChangeMode'};
-const IMPUTED_PURP_MAP = {'-1':'Missing', 1:'Home',2:'Work',3:'Work-related',4:'School',5:'Escort',6:'Shop',7:'Meal',8:'SocRec',9:'Errand/appointment',10:'ChangeMode',11:'Non-Home Night',12:'Other/Missing',14:'MergeTrip'};
+//const PURP_MAP = {1:'Home',2:'Work',3:'Work-related',4:'School',5:'Escort',6:'Shop',7:'Meal',8:'SocRec',9:'Errand/appointment',10:'ChangeMode'};
+const PURP_MAP = {'-1':'Missing', 1:'Home',2:'Work',3:'Work-related',4:'School',5:'Escort',6:'Shop',7:'Meal',8:'SocRec',9:'Errand/appointment',10:'ChangeMode',11:'Non-Home Night',12:'Other/Missing',14:'School-related'};
+const IMPUTED_PURP_MAP = {'-1':'Missing', 1:'Home',2:'Work',3:'Work-related',4:'School',5:'Escort',6:'Shop',7:'Meal',8:'SocRec',9:'Errand/appointment',10:'ChangeMode',11:'Non-Home Night',12:'Other/Missing',14:'School-related'};
 
 let sel_colorvals, sel_colors, sel_binsflag;
 let sel_bwvals;
